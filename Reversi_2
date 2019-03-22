@@ -1,0 +1,344 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+void printBoard(char board[][26], int n);
+void initialConfig(char board[][26], int n);
+char oppositeColour(char colour);
+bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol);
+bool moveAvailable(char board[][26], int n, char colour);
+bool isMoveValid(char board[][26], int n, char row, char col, char colour);
+bool positionInBounds(int n, char row, char col);
+void flipTile(char board[][26], int n, char colour, char row, char col, int deltaRow, int deltaCol);
+int humanMoves(char board[][26], int n, char playerColour);
+int numOfTilesOfColour(char board[][26], int n, char colour);
+int findScore(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol);
+int computerMoves(char board[][26], int n, char computerColour);
+int turnSwitch(int turn);
+void whichColourWins(char board[][26], int n);
+int main(int argc, char **argv)
+{
+	//Declaring the board dimension
+	int dimen;
+	char board[26][26];
+	
+	//User enters their board dimensions
+	printf("Enter the board dimension: ");
+	scanf("%d", &dimen);
+	
+	//User enters the colour they want the computer to play and player colour is taken to be the opposite
+	char computerColour, playerColour;
+	printf("Computer plays (B/W) : ");
+	scanf(" %c", &computerColour);
+
+	playerColour = oppositeColour(computerColour);
+	
+	initialConfig(board, dimen);
+	printBoard(board, dimen);
+	
+	//Black tile player goes first
+	int turn;
+	if(computerColour=='B')
+		turn = computerMoves(board,dimen,computerColour);
+	else
+		turn = humanMoves(board,dimen,playerColour);
+		
+	//Gameplay loop
+	while((moveAvailable(board,dimen,computerColour)) || (moveAvailable(board,dimen,playerColour)))
+	{
+		turn = turnSwitch(turn);
+		if(turn==1) {
+			if(!moveAvailable(board,dimen,playerColour))
+				printf("%c player has no valid move.", playerColour);
+			else
+				humanMoves(board,dimen,playerColour);
+		}
+		else {
+			if(!moveAvailable(board,dimen,computerColour))
+				printf("%c player has no valid move.", computerColour);
+			else
+				computerMoves(board,dimen,computerColour);
+		}
+
+	}
+	whichColourWins(board, dimen);
+	return 0;
+}
+
+void printBoard(char board[][26], int n)
+{
+    int i, j; 
+    char letter = 'a'; 
+    printf("  ");
+    
+    //Print the horizontal row of letters based on user input
+    for(i=0; i<n; i++) 
+        printf("%c", letter + i);
+            
+        printf("\n"); //Prints new line after the horizontal rows
+    
+    for(i=0; i<n; i++) {
+        printf("%c ", letter + i); //prints the vertical letters at the side
+        for (j = 0; j<n; j++) { 
+            printf("%c", board[i][j]); //print the rest of the board
+        }
+        printf("\n");
+    }
+}
+
+void initialConfig(char board[][26], int n) //prints the initial layout based on entered dimensions
+{
+    int i,j;
+    for(i=0; i<n; i++) //Matrix rows
+    {
+        for(j=0; j<n; j++) //Matrix columns
+        {
+            if(((i==n/2) && (j==n/2)) || ((i==(n/2)-1) && (j==(n/2) -1))) //Prints W in the initial layout 
+                board[i][j] = 'W';
+            else if (((i==(n/2)-1) && (j==n/2)) || ((i==n/2) && (j==(n/2)-1))) //Prints B in the initial layout
+                board[i][j] = 'B';
+            else 
+                board[i][j] = 'U'; //Prints U for unoccupied space in the inital layout
+        } 
+    }            
+}
+
+char oppositeColour(char colour)  //Finds the opposite colour to the given tile
+{
+	char otherColour;
+    if (colour == 'W')
+        otherColour = 'B';
+    else 
+        otherColour = 'W';
+	return otherColour;
+}
+
+bool positionInBounds(int n, char row, char col) //checks whether the specified row and column are within the bounds of the board
+{
+   if((row < n +'a') && (col < n +'a') && (row >= 'a') && (col >= 'a'))
+       return true;
+   else
+       return false;
+}
+
+bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol)
+{
+    //Finds the opposite colour to the given tile
+	char oppColour = oppositeColour(colour);
+        
+    //Finds when the move/flip is legal
+    if(board[row - 'a'][col - 'a'] == 'U') //Starts checking at an empty space
+    {
+        row +=deltaRow; //Increment row and col by deltarow to find the next space, and whatever is in it 
+        col += deltaCol;
+        while(positionInBounds(n, row, col)&& (board[row-'a'][col-'a']==oppColour)) //While the move is within the board dimensions
+        {
+           if(board[row - 'a'+deltaRow][col - 'a'+deltaCol] == colour) //If the same colour is seen, this is a valid move
+               return true;
+           else if(board[row - 'a'+deltaRow][col - 'a'+ deltaCol] == 'U') //If an empty space is seen, this is immediately invalid
+               return false;
+               
+           row +=deltaRow;
+           col +=deltaCol;
+        }
+    }
+    return false;
+}
+
+bool moveAvailable(char board[][26], int n, char colour) //Checking the moves available for both colours 
+{
+    int i,j,drow,dcol;
+    for(i=0; i<n; i++) //Increments down the rows
+    {
+        for(j=0; j<n; j++) //Increments across the columns
+        {
+            for(drow = -1; drow<2; drow++) //Increments deltaRow
+            {
+                for(dcol = -1; dcol<2; dcol++) //Increments deltaCol
+                {
+					if((dcol==0) && (drow ==0));
+					
+					else if(checkLegalInDirection(board,n,i + 'a',j+'a',colour, drow, dcol)) //Returns true if the move is valid
+						return true;
+                }
+            }
+        }
+    }
+	return false; 
+}
+
+bool isMoveValid(char board[][26], int n, char row, char col, char colour) //Checking the move validity 
+{
+    int drow,dcol;
+   
+	for(drow = -1; drow<2; drow++) //Increments deltaRow
+	{
+		for(dcol = -1; dcol<2; dcol++) //Increments deltaCol
+		{
+			if((dcol==0) && (drow ==0));
+			
+			else if(checkLegalInDirection(board,n,row,col,colour, drow, dcol)) //Returns true if the move is valid
+				return true;
+		}
+	}
+	return false; 
+}
+
+void flipTile(char board[][26], int n, char colour, char row, char col, int deltaRow, int deltaCol) //Flips the tiles after a valid move is entered
+{
+  char oppColour = oppositeColour(colour);
+	while(board[row-'a'+deltaRow][col-'a'+deltaCol]== oppColour)
+	{
+		board[row-'a'+deltaRow][col-'a'+deltaCol] = colour;
+		row +=deltaRow;
+		col +=deltaCol;
+	}
+}
+
+int humanMoves(char board[][26], int n, char playerColour)
+{
+	char row, col;
+	int dRow, dCol;//noSpace = 0;
+	bool validMove = false;
+	printf("Enter a move for colour %c (RowCol): ", playerColour);
+	scanf(" %c %c", &row, &col);
+	
+	//Checks if the move entered is a valid move and flips the tiles if it is
+	for(dRow = -1; dRow<2; dRow++) { //make the next three lines a checking validity function returning true or false 
+		for(dCol = -1; dCol<2; dCol++) {
+			if(checkLegalInDirection(board,n,row,col,playerColour,dRow,dCol)) {
+				flipTile(board, n, playerColour, row, col, dRow, dCol); //flip tiles if checkValidity is true
+				validMove = true;
+			}  
+		}  
+	}
+	
+	//Prints the new board if a valid move is played
+	if(validMove==true) 
+	{
+		board[row-'a'][col-'a'] = playerColour;
+		printBoard(board, n);
+	} 
+	
+	//Computer automatically wins if the user enters an invalid move
+	else 
+	{ 
+		char computerColour = oppositeColour(playerColour);
+		printf("Invalid move.\n%c player wins.", computerColour);
+		exit(0);
+	}
+		
+	return 1;
+}
+
+
+int numOfTilesOfColour(char board[][26], int n, char colour)
+{
+	int i, j, tiles = 0;
+	for(i=0; i<n; i++) //Increments down the rows
+	{
+		for(j=0; j<n; j++) //Increments across the columns
+		{
+			if(board[i][j] == colour)
+				tiles+=1;
+		}
+	} 
+	return tiles;
+}
+
+int findScore(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol)
+{
+	int score=0;
+    //Finds the opposite colour to the given tile
+	char oppColour = oppositeColour(colour);
+        
+    //Finds when the move/flip is legal
+    if(board[row - 'a'][col - 'a'] == 'U') //Starts checking at an empty space
+    {
+        row +=deltaRow; //Increment row and col by deltarow to find the next space, and whatever is in it 
+        col += deltaCol;
+        while(positionInBounds(n, row, col)&& (board[row-'a'][col-'a']==oppColour)) //While the move is within the board dimensions
+        {
+			score++;
+           if(board[row - 'a'+deltaRow][col - 'a'+deltaCol] == colour) 
+			   return score;
+	
+           row +=deltaRow;
+           col +=deltaCol; 
+        }
+    }
+    return score;
+}
+int computerMoves(char board[][26], int n, char computerColour) 
+{
+	int sum=0, max = 0, i,j,deltaRow, deltaCol;
+	char move[n][n], row, col;
+	//Finding the 'score' of each location, aka which one can flip the most opponent tiles
+	for(i=0; i<n; i++) {   
+        for(j=0; j<n; j++) {
+			sum = 0; //Resets the score at every array location
+			for(deltaRow = -1; deltaRow<2; deltaRow++) {
+				for(deltaCol = -1; deltaCol<2; deltaCol++) {
+					if(deltaRow==0 && deltaCol ==0);
+					
+					else if(checkLegalInDirection(board,n,i+'a',j+'a',computerColour,deltaRow,deltaCol)) 
+					{
+						sum+= findScore(board,n,i+'a', j+'a',computerColour,deltaRow,deltaCol); 
+						move[i][j] = computerColour;
+					}
+				}
+			}
+			if(sum>max) { //Changes to the higher score value and position
+				max = sum;
+				row = i + 'a';
+				col = j + 'a';
+			}
+			
+		}
+	}
+	
+	//Flip the tiles around the best place to move (place with the highest score)
+	if(move[row-'a'][col-'a']==computerColour) {
+		for(deltaRow = -1; deltaRow<2; deltaRow++) { 
+			for(deltaCol = -1; deltaCol<2; deltaCol++) {
+				if(checkLegalInDirection(board,n,row,col,computerColour,deltaRow,deltaCol))
+					flipTile(board,n,computerColour,row,col,deltaRow,deltaCol);
+				}
+			}
+		}
+		
+	board[row-'a'][col-'a'] = computerColour; //Sets the computer colour into the position with the highest score
+	//Printing the board after the computer finds its move to play 
+	printf("Computer places %c at %c%c.\n", computerColour, row, col);
+	printBoard(board,n);
+	return 2; //The 2 is the number of the computer's turn in the turnSwitch function			
+}
+
+int turnSwitch(int turn) //Switches whose turn it is 
+{
+	if(turn==1)
+		turn = 2;
+	else 
+		turn = 1;
+	return turn;
+}
+
+void whichColourWins(char board[][26], int n)
+{
+	//Player with most tiles on board wins 
+	int blackNum = 0, whiteNum = 0; 
+	whiteNum = numOfTilesOfColour(board,n,'W'); //Counts the number of white tiles
+	blackNum = numOfTilesOfColour(board,n,'B'); //Counts the number of black tiles
+	if(whiteNum > blackNum) 
+		printf("W colour wins.");
+	else if(blackNum > whiteNum)
+		printf("B colour wins.");
+	else
+		printf("Draw!");
+}
+
+
+//composite scoring: cosider a composite scoring function
+//score = a* number of flips + b*number of corners +c*opponent moves eliminated 
+//a, b, and c are constants set empirically by programmer 
+//void copyBoard(char board[][26], int n, char computerColour, char row, char col) //Stores a copy of the current playing board
+
