@@ -1,0 +1,189 @@
+#include <stdio.h>
+#include <stdbool.h>
+void printBoard(char board[][26], int n);
+void initialConfig(char board[][26], int n);
+void boardConfiguration(char board[][26], int n);
+void availableMoves(char board[][26], int n, char colour);
+bool positionInBounds(int n, char row, char col);
+bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol);
+void getMove(char board[][26],int n);
+void flipTile(char board[][26], int n, char colour, char row, char col, int deltaRow, int deltaCol);
+int main(int argc, char **argv)
+{
+    //Declaring the board dimension
+    int dimen;
+    char board[26][26];
+    
+    //User enters their board dimensions
+    printf("Enter the board dimension: ");
+    scanf("%d", &dimen);
+    
+    //Prints the initial board
+    initialConfig(board, dimen); 
+    printBoard(board, dimen);
+    
+    //Prints configured board
+    boardConfiguration(board, dimen);
+    printBoard(board, dimen);
+    
+    //Prints available moves
+    availableMoves(board, dimen, 'W');
+    availableMoves(board, dimen, 'B');
+    
+    //Prompts user to enter move and prints resulting board
+    getMove(board,dimen);
+    printBoard(board,dimen);
+    
+    return 0;
+}
+
+void printBoard(char board[][26], int n)
+{
+    int i, j; 
+    char letter = 'a'; 
+    printf("  ");
+    
+    //Print the horizontal row of letters based on user input
+    for(i=0; i<n; i++) 
+        printf("%c", letter + i);
+            
+        printf("\n"); //Prints new line after the horizontal rows
+    
+    for(i=0; i<n; i++) {
+        printf("%c ", letter + i); //prints the vertical letters at the side
+        for (j = 0; j<n; j++) { 
+            printf("%c", board[i][j]); //print the rest of the board
+        }
+        printf("\n");
+    }
+}
+
+void initialConfig(char board[][26], int n) //prints the initial layout based on entered dimensions
+{
+    int i,j;
+    for(i=0; i<n; i++) //Matrix rows
+    {
+        for(j=0; j<n; j++) //Matrix columns
+        {
+            if(((i==n/2) && (j==n/2)) || ((i==(n/2)-1) && (j==(n/2) -1))) //Prints W in the initial layout 
+                board[i][j] = 'W';
+            else if (((i==(n/2)-1) && (j==n/2)) || ((i==n/2) && (j==(n/2)-1))) //Prints B in the initial layout
+                board[i][j] = 'B';
+            else 
+                board[i][j] = 'U'; //Prints U for unoccupied space in the inital layout
+        } 
+    }            
+}
+
+void boardConfiguration(char board[][26], int n) //Creates intermediate configuration for board
+{
+    char blackOrWhite = 'B', row = 'a', column = 'a';
+    printf("Enter board configuration:\n"); 
+    
+    //Scan and store the specified colour in the specified array index until exclamation marks are entered
+    while((blackOrWhite!='!') && (row!='!') && (column!='!')) 
+    {
+        scanf(" %c%c%c", &blackOrWhite, &row, &column);
+        if((blackOrWhite!='!') && (row!='!') && (column!='!')) 
+            board[row-'a'][column-'a'] = blackOrWhite;
+    }
+}
+
+void availableMoves(char board[][26], int n, char colour) //Prints the moves available for both colours 
+{
+    int i,j,drow,dcol,cnt=0;
+    printf("Available moves for %c:\n", colour);
+    
+    for(i=0; i<n; i++) //Increments down the rows
+    {
+        for(j=0; j<n; j++) //Increments across the columns
+        {
+            for(drow = -1; drow<2; drow++) //Increments deltaRow
+            {
+                for(dcol = -1; dcol<2; dcol++) //Increments deltaCol
+                {
+                  if((dcol==0) && (drow ==0));
+        
+                  else if(checkLegalInDirection(board,n,i + 'a',j+'a',colour, drow, dcol)) //Prints the board array index letter of the available move if it is possible 
+                     printf("%c%c\n", i+'a', j+'a'); 
+                }
+            }
+        }
+    }
+}
+
+bool positionInBounds(int n, char row, char col) //checks whether the specified row and column are within the bounds of the board
+{
+   if((row < n +'a') && (col < n +'a') && (row >= 'a') && (col >= 'a'))
+       return true;
+   else
+       return false;
+}
+
+bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol)
+{
+    //Finds the opposite colour to the given tile
+    char oppColour;
+    if (colour == 'W')
+        oppColour = 'B';
+    else 
+        oppColour = 'W';
+        
+    //Finds when the move/flip is legal
+    if(board[row - 'a'][col - 'a'] == 'U') //Starts checking at an empty space
+    {
+        row +=deltaRow; //Increment row and col by deltarow to find the next space, and whatever is in it 
+        col += deltaCol;
+        while(positionInBounds(n, row, col)&& (board[row-'a'][col-'a']==oppColour)) //While the move is within the board dimensions
+        {
+           if(board[row - 'a'+deltaRow][col - 'a'+deltaCol] == colour) //If the same colour is seen, this is a valid move
+               return true;
+           else if(board[row - 'a'+deltaRow][col - 'a'+ deltaCol] == 'U') //If an empty space is seen, this is immediately invalid
+               return false;
+               
+           row +=deltaRow;
+           col +=deltaCol;
+        }
+    }
+    return false;
+}
+
+void getMove(char board[][26], int n)
+{
+    //User enters their move after available moves are printed
+    char colour, row, col;
+    printf("Enter a move:\n");
+    scanf(" %c%c%c", &colour, &row, &col);
+    
+    int drow, dcol;
+    bool repeatAgain = false;
+    for(drow = -1; drow<2; drow++) {
+        for(dcol = -1; dcol<2; dcol++) {
+            if(checkLegalInDirection(board,n,row,col,colour,drow,dcol)) {
+                repeatAgain = true;
+                flipTile(board,n,colour,row,col,drow,dcol);
+            }
+        }
+    }
+    if(repeatAgain==true) {
+        printf("Valid move.\n");
+        board[row - 'a'][col - 'a'] = colour;
+    }
+    else
+        printf("Invalid move.\n");
+}
+
+void flipTile(char board[][26], int n, char colour, char row, char col, int deltaRow, int deltaCol) //Flips the tiles after a valid move is entered
+{
+    char oppColour;
+    if (colour == 'W')
+        oppColour = 'B';
+    else 
+        oppColour = 'W';
+        while(board[row-'a'+deltaRow][col-'a'+deltaCol]== oppColour)
+        {
+            board[row-'a'+deltaRow][col-'a'+deltaCol] = colour;
+            row +=deltaRow;
+            col +=deltaCol;
+        }
+}
